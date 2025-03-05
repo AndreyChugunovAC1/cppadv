@@ -72,7 +72,7 @@ T&& forward(T& x) {
   return static_cast<T&&>(x);
 }
 ```
-* не работает для rvalue (нужно для генерализированного кода)
+* Не работает для rvalue (а это нужно для генерализированного кода)
 * Сам выводит тип (правило вывода T для T&& не всегда подходят) - нужен no_deduce.
 
 ## Итог (с использованием remove_reference_t):
@@ -130,7 +130,7 @@ decltype(f(T())) // не всегда работает
 ```cpp
 template<typename T>
 T&& declval() {
-  assert(false, "can not be called in evaluating context");
+  static_assert(false, "Calling declval is ill-formed");
 }
 ```
 `declval` - только в _non-evaluating-context_.
@@ -149,7 +149,7 @@ auto function(Args... args) -> R;
 __Решение #2__ проблемы выше:
 ```cpp
 template<typename T>
-auto g(T&& x) -> decltype(f(x));
+auto g(T&& x) -> decltype(f(forward<T>(x)));
 ```
 
 ### auto
@@ -191,14 +191,14 @@ decltype(auto) g(T&& x);
 ```cpp
 struct nullptr_t {
   template<typename T>
-  operator T*() const {
+  operator T*() const { /* implicit */
     return 0;
   }
 };
 
 nullptr_t nullptr;
 ```
-Теперь форвардинг будет выводить по крайней мере указатель.
+Теперь форвардинг будет выводить по крайней мере указатель. Чтобы не приходилось постоянно подключать стандартную библиотеку, этот тип встроили в компилятор.
 
 ## lifetime extension
 const ссылка продлевает жизнь объекта, на который она забинжена.
@@ -214,11 +214,24 @@ int xvalue();
 int&& a = xvalue(); // OK
 ```
 
+* Для `T&` запрещен _lifetime extension_.
+* Нельзя расширять время жизни поля класса:
+```cpp
+struct S {
+  int a;
+};
+
+int& getref() {
+  return S{0}.a; // UB
+}
+```
+* не работает для элементов массива.
+
 Просто пример 1:
 ```cpp
 for (pair<int, int> const& entry : mapp) { /* ... */ }
 ```
-* тут будут копирования, потому что на самом деле в map хранится `pair<int const, int>`.
+* Тут будут копирования, потому что на самом деле в map хранится `pair<int const, int>`.
 
 Просто пример 2:
 ```cpp
