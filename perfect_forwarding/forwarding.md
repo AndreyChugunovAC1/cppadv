@@ -142,8 +142,17 @@ decltype(f(declval<T>())) g(T&& x);
 ```
 
 ### Trailing return type
+__Проблема:__
 ```cpp
-auto function(Args... args) -> R;
+Template<T> g(T);
+```
+На момент `Template<T>` неизвестно, что такое `T`, потому что код C++ читается по порядку за исключением ADL (и наверное еще: шаблоны, SFINAE, перегрузки функций, dependent names, оптимизации, исключения, виртуальные функции).
+
+Так выглядит _trailing return type_:
+```cpp
+auto function(Args...) -> R;
+// solution:
+auto g(T) -> Template<T>;
 ```
 
 __Решение #2__ проблемы выше:
