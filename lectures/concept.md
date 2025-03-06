@@ -91,4 +91,74 @@ template<auto X>
 requires req<X>
 ```
 
-__Requirement-clause__
+Requirement-clause: `requires expr`
+Внутри requires expr:
+```cpp
+template <typename T>
+concept callable_int_int = requires(T x) {
+  { x(0) } -> std::same_as<int>;
+};
+```
+* Валидность свойства выражения - _compound requirement_
+* Наличие функции - _simple requirement_
+* Наличие типа (зависимого) - _type requirement_
+
+## Более/менее специализированное
+```cpp
+concept A // atomic
+concept B // atomic
+concept C = A & B // more specialized
+concept D = C && true // more cpecialized
+concept D = C || false // less cpecialized
+/// etc...
+```
+
+## Прочее
+### `same_as`:
+```cpp
+template<typename A, typename B>
+concept half_same_as = std::is_same_v<A, B>;
+// для симметрии:
+template<typename A, typename B>
+concept same_as = half_same_as<A, B> && half_same_as<B, A>;
+```
+### Конфуз:
+```cpp
+template<typename T>
+requires requires(T x) { ... }
+```
+
+### SFINAE иногда не SFINAE-friendly:
+```cpp
+template<typename A, typename B>
+struct pair {
+private:
+  A a; B b;
+  pair(A _a, B _b) : a(_a), b(_b) {}
+}
+```
+`is_default_constructible<pair>` дает true (конструктор же есть), при этом понятно что конструктор может не скомпилироваться.
+```cpp
+template<typename A, typename B>
+struct pair {
+private:
+  A a; B b;
+  template<typename = std::enable_if_t<...>>
+  pair(A _a, B _b) : a(_a), b(_b) {}
+}
+```
+Все равно hard ошибка - с концептами ее не будет.
+
+### Предпочтение при наследовании
+```cpp
+struct A {};
+struct B : A {};
+struct C : B {};
+f(A const&);
+f(B const&);
+f(B{}) // лучше подходит f(B const&)
+f(C{}) // лучше подходит f(B const&)
+```
+
+
+
