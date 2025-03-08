@@ -46,7 +46,7 @@ int main() {
 
 Устройство корутины:
 
-![](image.png)
+![](inner/image.png)
 
 * _coroutine handle_ - изкоуровневая вещь. Скорее всего пользоваться придется оберткой: _coroutine type_ (на картинке "wrapper").
 * В случае с `generator` это просто `coroutine_handle<promise_type>` + операции (у него это `begin`, `end`).
