@@ -265,3 +265,58 @@ while (q.empty()) {
   ug.lock();
 }
 ```
+
+## thread cancellaion
+Есть потребность принудительно завершать потоки.
+
+Самый простой способ плохой, все форсированные завершения небезопасны.
+
+У `std::jthread`:
+```cpp
+std::jthread th([](std::stop_token const& st){
+  while (!st.stop_requested()) { ... }
+})
+
+th.request_stop();
+```
+
+Более подробно (через более низкоуровневый `std::thread`):
+```cpp
+std::atomic<bool> stop_requested = false;
+std::thread th([&stop_requested](){
+  while (!stop_requested) { ... }
+})
+
+stop_request.store(true);
+```
+
+Нормальнее (почти в точности переписанный `jthread`, без учета RAII):
+```cpp
+std::stop_source stop_src;
+std::thread th([&stop_src](){
+  while (!stop_src.stop_requested()) { ... }
+})
+
+stop_src.request_stop();
+th.join();
+```
+
+Проблема: в потоке большой стек вызова и явно не хочется передавать через много функций `stop_token`.
+
+Решение: использовать исключения (скажем, `throw interrupt();`). Тут все равно надо пропагейтить `stop_token`, но как идея, это возможно поможет.
+
+## Асинхронные операции
+Идейно понятно.
+
+_polling_ - антипаттерн, который может помочь справиться с блокирующими вызовами.
+
+## Блокирующие вызовы
+... - вызов ждущий события.
+
+Примеры:
+* `read()`, `write()` (`<io.h>`)
+* `recv`/`send` в сети
+* `sleep()`
+* pthread_mutex_lock, pthread_cond_wait, pthread_join - какие-то сишные штуки.
+
+Чтобы сделать _cancellation_ при блокирующем вызове
